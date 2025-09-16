@@ -7,6 +7,19 @@ import {
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import {
+  setAllowedDirectories,
+  getAllowedDirectories,
+  validatePath,
+  getFileStats,
+  readFileContent,
+  writeFileContent,
+  applyFileEdits,
+  tailFile,
+  headFile,
+  searchFilesWithValidation,
+  formatSize
+} from './filesystem-utils.js';
 
 // Define memory file path using environment variable with fallback
 const defaultMemoryPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'memory.json');
@@ -205,6 +218,14 @@ class KnowledgeGraphManager {
 
 const knowledgeGraphManager = new KnowledgeGraphManager();
 
+// Initialize filesystem allowed directories
+// You can customize these directories as needed for your use case
+const allowedDirs = [
+  process.cwd(), // Current working directory
+  path.dirname(fileURLToPath(import.meta.url)), // Directory containing this script
+];
+setAllowedDirectories(allowedDirs);
+
 
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -381,6 +402,174 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["names"],
         },
       },
+      // Filesystem tools
+      {
+        name: "list_allowed_directories",
+        description: "Returns the list of directories that this server is allowed to access. Subdirectories within these allowed directories are also accessible. Use this to understand which directories and their nested paths are available before trying to access files.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      {
+        name: "list_directory",
+        description: "Get a detailed listing of all files and directories in a specified path. Results clearly distinguish between files and directories with [FILE] and [DIR] prefixes. This tool is essential for understanding directory structure and finding specific files within a directory. Only works within allowed directories.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: { type: "string" }
+          },
+          required: ["path"],
+        },
+      },
+      {
+        name: "list_directory_with_sizes",
+        description: "Get a detailed listing of all files and directories in a specified path, including sizes. Results clearly distinguish between files and directories with [FILE] and [DIR] prefixes. This tool is useful for understanding directory structure and finding specific files within a directory. Only works within allowed directories.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: { type: "string" },
+            sortBy: { 
+              type: "string",
+              enum: ["name", "size"],
+              default: "name",
+              description: "Sort entries by name or size" 
+            }
+          },
+          required: ["path"],
+        },
+      },
+      {
+        name: "get_file_info",
+        description: "Retrieve detailed metadata about a file or directory. Returns comprehensive information including size, creation time, last modified time, permissions, and type. This tool is perfect for understanding file characteristics without reading the actual content. Only works within allowed directories.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: { type: "string" }
+          },
+          required: ["path"],
+        },
+      },
+      {
+        name: "read_text_file",
+        description: "Read the complete contents of a file from the file system as text. Handles various text encodings and provides detailed error messages if the file cannot be read. Use this tool when you need to examine the contents of a single file. Use the 'head' parameter to read only the first N lines of a file, or the 'tail' parameter to read only the last N lines of a file. Operates on the file as text regardless of extension. Only works within allowed directories.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: { type: "string" },
+            head: { 
+              type: "number",
+              description: "If provided, returns only the first N lines of the file" 
+            },
+            tail: { 
+              type: "number",
+              description: "If provided, returns only the last N lines of the file" 
+            }
+          },
+          required: ["path"],
+        },
+      },
+      {
+        name: "read_multiple_files",
+        description: "Read the contents of multiple files simultaneously. This is more efficient than reading files one by one when you need to analyze or compare multiple files. Each file's content is returned with its path as a reference. Failed reads for individual files won't stop the entire operation. Only works within allowed directories.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            paths: {
+              type: "array",
+              items: { type: "string" }
+            }
+          },
+          required: ["paths"],
+        },
+      },
+      {
+        name: "write_file",
+        description: "Create a new file or completely overwrite an existing file with new content. Use with caution as it will overwrite existing files without warning. Handles text content with proper encoding. Only works within allowed directories.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: { type: "string" },
+            content: { type: "string" }
+          },
+          required: ["path", "content"],
+        },
+      },
+      {
+        name: "edit_file",
+        description: "Make line-based edits to a text file. Each edit replaces exact line sequences with new content. Returns a git-style diff showing the changes made. Only works within allowed directories.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: { type: "string" },
+            edits: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  oldText: { 
+                    type: "string",
+                    description: "Text to search for - must match exactly" 
+                  },
+                  newText: { 
+                    type: "string",
+                    description: "Text to replace with" 
+                  }
+                },
+                required: ["oldText", "newText"],
+                additionalProperties: false
+              }
+            },
+            dryRun: { 
+              type: "boolean",
+              default: false,
+              description: "Preview changes using git-style diff format" 
+            }
+          },
+          required: ["path", "edits"],
+        },
+      },
+      {
+        name: "create_directory",
+        description: "Create a new directory or ensure a directory exists. Can create multiple nested directories in one operation. If the directory already exists, this operation will succeed silently. Perfect for setting up directory structures for projects or ensuring required paths exist. Only works within allowed directories.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: { type: "string" }
+          },
+          required: ["path"],
+        },
+      },
+      {
+        name: "move_file",
+        description: "Move or rename files and directories. Can move files between directories and rename them in a single operation. If the destination exists, the operation will fail. Works across different directories and can be used for simple renaming within the same directory. Both source and destination must be within allowed directories.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            source: { type: "string" },
+            destination: { type: "string" }
+          },
+          required: ["source", "destination"],
+        },
+      },
+      {
+        name: "search_files",
+        description: "Recursively search for files and directories matching a pattern. Searches through all subdirectories from the starting path. The search is case-insensitive and matches partial names. Returns full paths to all matching items. Great for finding files when you don't know their exact location. Only searches within allowed directories.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: { type: "string" },
+            pattern: { type: "string" },
+            excludePatterns: {
+              type: "array",
+              items: { type: "string" },
+              default: []
+            }
+          },
+          required: ["path", "pattern"],
+        },
+      },
     ],
   };
 });
@@ -417,6 +606,160 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.searchNodes(args.query as string), null, 2) }] };
     case "open_nodes":
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.openNodes(args.names as string[]), null, 2) }] };
+    
+    // Filesystem tool handling
+    case "list_allowed_directories":
+      return { content: [{ type: "text", text: JSON.stringify(getAllowedDirectories(), null, 2) }] };
+    
+    case "list_directory":
+      {
+        const validatedPath = await validatePath(args.path as string);
+        const entries = await fs.readdir(validatedPath, { withFileTypes: true });
+        const result = entries.map(entry => ({
+          name: entry.name,
+          type: entry.isDirectory() ? 'directory' : 'file'
+        }));
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      }
+    
+    case "list_directory_with_sizes":
+      {
+        const validatedPath = await validatePath(args.path as string);
+        const sortBy = (args.sortBy as string) || "name";
+        const entries = await fs.readdir(validatedPath, { withFileTypes: true });
+        
+        const entriesWithSizes = await Promise.all(entries.map(async (entry) => {
+          const fullPath = path.join(validatedPath, entry.name);
+          let size = 0;
+          try {
+            if (entry.isFile()) {
+              const stats = await fs.stat(fullPath);
+              size = stats.size;
+            }
+          } catch {
+            // Ignore errors for size calculation
+          }
+          
+          return {
+            name: entry.name,
+            type: entry.isDirectory() ? 'directory' : 'file',
+            size: entry.isFile() ? formatSize(size) : undefined,
+            sizeBytes: size
+          };
+        }));
+
+        // Sort entries
+        if (sortBy === "size") {
+          entriesWithSizes.sort((a, b) => {
+            if (a.type !== b.type) {
+              return a.type === 'directory' ? -1 : 1;
+            }
+            if (a.type === 'directory') return a.name.localeCompare(b.name);
+            // For files, sort by actual size
+            return b.sizeBytes - a.sizeBytes;
+          });
+        } else {
+          entriesWithSizes.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        
+        // Remove sizeBytes from the response
+        const cleanedEntries = entriesWithSizes.map(({ sizeBytes, ...entry }) => entry);
+        
+        return { content: [{ type: "text", text: JSON.stringify(cleanedEntries, null, 2) }] };
+      }
+    
+    case "get_file_info":
+      {
+        const validatedPath = await validatePath(args.path as string);
+        const info = await getFileStats(validatedPath);
+        return { content: [{ type: "text", text: JSON.stringify(info, null, 2) }] };
+      }
+    
+    case "read_text_file":
+      {
+        const validatedPath = await validatePath(args.path as string);
+        let content: string;
+        
+        if (args.head && typeof args.head === 'number') {
+          content = await headFile(validatedPath, args.head);
+        } else if (args.tail && typeof args.tail === 'number') {
+          content = await tailFile(validatedPath, args.tail);
+        } else {
+          content = await readFileContent(validatedPath);
+        }
+        
+        return { content: [{ type: "text", text: content }] };
+      }
+    
+    case "read_multiple_files":
+      {
+        const paths = args.paths as string[];
+        const results: Array<{ path: string; content?: string; error?: string }> = [];
+        
+        for (const filePath of paths) {
+          try {
+            const validatedPath = await validatePath(filePath);
+            const content = await readFileContent(validatedPath);
+            results.push({ path: filePath, content });
+          } catch (error) {
+            results.push({ 
+              path: filePath, 
+              error: error instanceof Error ? error.message : String(error) 
+            });
+          }
+        }
+        
+        return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
+      }
+    
+    case "write_file":
+      {
+        const validatedPath = await validatePath(args.path as string);
+        await writeFileContent(validatedPath, args.content as string);
+        return { content: [{ type: "text", text: `Successfully wrote file: ${args.path}` }] };
+      }
+    
+    case "edit_file":
+      {
+        const validatedPath = await validatePath(args.path as string);
+        const edits = args.edits as Array<{ oldText: string; newText: string }>;
+        const dryRun = args.dryRun as boolean || false;
+        
+        const diff = await applyFileEdits(validatedPath, edits, dryRun);
+        return { content: [{ type: "text", text: diff }] };
+      }
+    
+    case "create_directory":
+      {
+        const validatedPath = await validatePath(args.path as string);
+        await fs.mkdir(validatedPath, { recursive: true });
+        return { content: [{ type: "text", text: `Successfully created directory: ${args.path}` }] };
+      }
+    
+    case "move_file":
+      {
+        const validatedSource = await validatePath(args.source as string);
+        const validatedDestination = await validatePath(args.destination as string);
+        await fs.rename(validatedSource, validatedDestination);
+        return { content: [{ type: "text", text: `Successfully moved ${args.source} to ${args.destination}` }] };
+      }
+    
+    case "search_files":
+      {
+        const validatedPath = await validatePath(args.path as string);
+        const pattern = args.pattern as string;
+        const excludePatterns = (args.excludePatterns as string[]) || [];
+        
+        const results = await searchFilesWithValidation(
+          validatedPath, 
+          pattern, 
+          getAllowedDirectories(),
+          { excludePatterns }
+        );
+        
+        return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
+      }
+    
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
