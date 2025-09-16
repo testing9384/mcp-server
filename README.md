@@ -11,10 +11,10 @@
    npm run build
    node build/index.js
    ```
-2. **Navigate to Claude Desktop config update file **
+2. **Navigate to Claude Desktop config update file**
    
       At location like C:\Users\saskiagilmer\AppData\Roaming\Claude\claude_desktop_config.json
-4. ** Paste this text **
+4. **Paste this text**
       ```
    {
      "mcpServers": {
@@ -29,6 +29,6 @@
        }
    }
       ```
-5. ** For any updates, kill all Claude Desktop processes **
+5. **For any updates, kill all Claude Desktop processes**
    
      Do this in Task Manager so you can kill background processes too
