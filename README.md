@@ -11,3 +11,24 @@
    npm run build
    node build/index.js
    ```
+2. **Navigate to Claude Desktop config update file **
+   
+      At location like C:\Users\saskiagilmer\AppData\Roaming\Claude\claude_desktop_config.json
+4. ** Paste this text **
+      ```
+   {
+     "mcpServers": {
+       "weather-memory-server": {
+         "command": "node",
+         "args": ["C:/Users/saskiagilmer/source/repos/mcp-server/build/index.js",
+           "-y",
+           "@modelcontextprotocol/server-memory"],
+         "env": {
+           "MEMORY_FILE_PATH": "/Users/saskiagilmer/Documents/custom/memory.json"
+         }
+       }
+   }
+      ```
+5. ** For any updates, kill all Claude Desktop processes **
+   
+     Do this in Task Manager so you can kill background processes too
