@@ -9,4 +9,5 @@
 1. **Build the project**
    ```sh
    npm run build
+   node build/index.js
    ```
