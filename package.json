@@ -1,11 +1,10 @@
 {
   "name": "mcp-server",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "type": "module",
   "bin": {
-    "weather": "./build/index.js"
+    "weather": "build/index.js"
   },
   "scripts": {
     "build": "tsc && chmod 755 build/index.js"
@@ -24,5 +23,14 @@
   "devDependencies": {
     "@types/node": "^24.5.0",
     "typescript": "^5.9.2"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/testing9384/mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/testing9384/mcp-server/issues"
+  },
+  "homepage": "https://github.com/testing9384/mcp-server#readme",
+  "description": ""
 }
