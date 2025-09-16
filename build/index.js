@@ -1,12 +1,9 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
-import fetch from "node-fetch";
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-const NWS_API_BASE = "https://api.weather.gov";
-const USER_AGENT = "weather-app/1.0";
 // Define memory file path using environment variable with fallback
 const defaultMemoryPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'memory.json');
 // If MEMORY_FILE_PATH is just a filename, put it in the same directory as the script
@@ -17,7 +14,7 @@ const MEMORY_FILE_PATH = process.env.MEMORY_FILE_PATH
     : defaultMemoryPath;
 // Create unified server instance
 const server = new Server({
-    name: "weather-memory-server",
+    name: "open-context",
     version: "1.0.0",
 }, {
     capabilities: {
@@ -25,144 +22,10 @@ const server = new Server({
         tools: {},
     },
 });
-// Helper function for making NWS API requests
-async function makeNWSRequest(url) {
-    const headers = {
-        "User-Agent": USER_AGENT,
-        Accept: "application/geo+json",
-    };
-    try {
-        const response = await fetch(url, { headers });
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return (await response.json());
-    }
-    catch (error) {
-        console.error("Error making NWS request:", error);
-        return null;
-    }
-}
-// Format alert data
-function formatAlert(feature) {
-    const props = feature.properties;
-    return [
-        `Event: ${props.event || "Unknown"}`,
-        `Area: ${props.areaDesc || "Unknown"}`,
-        `Severity: ${props.severity || "Unknown"}`,
-        `Status: ${props.status || "Unknown"}`,
-        `Headline: ${props.headline || "No headline"}`,
-        "---",
-    ].join("\n");
-}
-// Register weather tools - will be handled by unified request handlers below
-// Weather tool implementations
-async function getAlerts(state) {
-    const stateCode = state.toUpperCase();
-    const alertsUrl = `${NWS_API_BASE}/alerts?area=${stateCode}`;
-    const alertsData = await makeNWSRequest(alertsUrl);
-    if (!alertsData) {
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: "Failed to retrieve alerts data",
-                },
-            ],
-        };
-    }
-    const features = alertsData.features || [];
-    if (features.length === 0) {
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: `No active alerts for ${stateCode}`,
-                },
-            ],
-        };
-    }
-    const formattedAlerts = features.map(formatAlert);
-    const alertsText = `Active alerts for ${stateCode}:\n\n${formattedAlerts.join("\n")}`;
-    return {
-        content: [
-            {
-                type: "text",
-                text: alertsText,
-            },
-        ],
-    };
-}
-async function getForecast(latitude, longitude, reasonforrequest) {
-    // Get grid point data
-    const pointsUrl = `${NWS_API_BASE}/points/${latitude.toFixed(4)},${longitude.toFixed(4)}`;
-    const pointsData = await makeNWSRequest(pointsUrl);
-    if (!pointsData) {
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: `Failed to retrieve grid point data for coordinates: ${latitude}, ${longitude}. This location may not be supported by the NWS API (only US locations are supported).`,
-                },
-            ],
-        };
-    }
-    const forecastUrl = pointsData.properties?.forecast;
-    if (!forecastUrl) {
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: "Failed to get forecast URL from grid point data",
-                },
-            ],
-        };
-    }
-    // Get forecast data
-    const forecastData = await makeNWSRequest(forecastUrl);
-    if (!forecastData) {
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: "Failed to retrieve forecast data",
-                },
-            ],
-        };
-    }
-    const periods = forecastData.properties?.periods || [];
-    if (periods.length === 0) {
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: "No forecast periods available",
-                },
-            ],
-        };
-    }
-    // Format forecast periods
-    const formattedForecast = periods.map((period) => [
-        `${period.name || "Unknown"}:`,
-        `Temperature: ${period.temperature || "Unknown"}°${period.temperatureUnit || "F"}`,
-        `Wind: ${period.windSpeed || "Unknown"} ${period.windDirection || ""}`,
-        `${period.shortForecast || "No forecast available"}`,
-        "---",
-    ].join("\n"));
-    const forecastText = `Forecast for ${latitude}, ${longitude}:\n\n${formattedForecast.join("\n")}`;
-    return {
-        content: [
-            {
-                type: "text",
-                text: forecastText,
-            },
-        ],
-    };
-}
 async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("Weather MCP Server running on stdio");
+    console.error("Open Context MCP Server running on stdio");
 }
 main().catch((error) => {
     console.error("Fatal error in main():", error);
@@ -289,51 +152,6 @@ const knowledgeGraphManager = new KnowledgeGraphManager();
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
         tools: [
-            // Weather tools
-            {
-                name: "get_alerts",
-                description: "Get weather alerts for a state",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        state: {
-                            type: "string",
-                            minLength: 2,
-                            maxLength: 2,
-                            description: "Two-letter state code (e.g. CA, NY)"
-                        },
-                    },
-                    required: ["state"],
-                },
-            },
-            {
-                name: "get_forecast",
-                description: "Get weather forecast for a location",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        latitude: {
-                            type: "number",
-                            minimum: -90,
-                            maximum: 90,
-                            description: "Latitude of the location"
-                        },
-                        longitude: {
-                            type: "number",
-                            minimum: -180,
-                            maximum: 180,
-                            description: "Longitude of the location"
-                        },
-                        reasonforrequest: {
-                            type: "string",
-                            minLength: 2,
-                            maxLength: 300,
-                            description: "Reason for requesting the forecast"
-                        },
-                    },
-                    required: ["latitude", "longitude", "reasonforrequest"],
-                },
-            },
             // Memory/Knowledge graph tools
             {
                 name: "create_entities",
@@ -510,19 +328,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 });
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-    // Weather tool handling
-    if (name === "get_alerts") {
-        if (!args || !args.state) {
-            throw new Error("State parameter is required for get_alerts tool");
-        }
-        return await getAlerts(args.state);
-    }
-    if (name === "get_forecast") {
-        if (!args || typeof args.latitude !== 'number' || typeof args.longitude !== 'number' || !args.reasonforrequest) {
-            throw new Error("Latitude, longitude, and reasonforrequest parameters are required for get_forecast tool");
-        }
-        return await getForecast(args.latitude, args.longitude, args.reasonforrequest);
-    }
     // Memory/Knowledge graph tool handling
     if (name === "read_graph") {
         return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.readGraph(), null, 2) }] };
