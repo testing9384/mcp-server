@@ -31,6 +31,37 @@ const MEMORY_FILE_PATH = process.env.MEMORY_FILE_PATH
     : path.join(path.dirname(fileURLToPath(import.meta.url)), process.env.MEMORY_FILE_PATH)
   : defaultMemoryPath;
 
+// Helper function to parse allowed directories from environment variable
+function parseAllowedDirectories(envVar: string | undefined): string[] {
+  if (!envVar) {
+    return [];
+  }
+
+  // Try to parse as JSON array first
+  try {
+    const parsed = JSON.parse(envVar);
+    if (Array.isArray(parsed)) {
+      return parsed.map((dir: any) => {
+        const dirStr = String(dir);
+        // Resolve relative paths to absolute paths
+        return path.isAbsolute(dirStr) ? dirStr : path.resolve(dirStr);
+      });
+    }
+  } catch {
+    // If JSON parsing fails, treat as comma-separated string
+  }
+
+  // Parse as comma-separated string
+  return envVar
+    .split(',')
+    .map(dir => dir.trim())
+    .filter(dir => dir.length > 0)
+    .map(dir => {
+      // Resolve relative paths to absolute paths
+      return path.isAbsolute(dir) ? dir : path.resolve(dir);
+    });
+}
+
 // Create unified server instance
 const server = new Server({
   name: "open-context",
@@ -219,11 +250,19 @@ class KnowledgeGraphManager {
 const knowledgeGraphManager = new KnowledgeGraphManager();
 
 // Initialize filesystem allowed directories
-// You can customize these directories as needed for your use case
-const allowedDirs = [
+// Default directories include current working directory and script directory
+const defaultAllowedDirs = [
   process.cwd(), // Current working directory
   path.dirname(fileURLToPath(import.meta.url)), // Directory containing this script
 ];
+
+// Parse user-specified directories from environment variable
+const userAllowedDirs = parseAllowedDirectories(process.env.ALLOWED_DIRECTORIES);
+
+// Combine default and user-specified directories, removing duplicates
+const allowedDirs = [...new Set([...defaultAllowedDirs, ...userAllowedDirs])];
+
+console.log('Allowed directories:', allowedDirs);
 setAllowedDirectories(allowedDirs);
 
 
