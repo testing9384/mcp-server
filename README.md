@@ -11,9 +11,17 @@
    npm run build
    node build/index.js
    ```
-2. **Navigate to Claude Desktop config update file**
+2. **Navigate to MCP config update file**
+
    
-      At location like C:\Users\saskiagilmer\AppData\Roaming\Claude\claude_desktop_config.json
+   For Claude Desktop:
+   
+         C:\Users\saskiagilmer\AppData\Roaming\Claude\claude_desktop_config.json
+
+   For VSCode:
+   
+         C:\Users\saskiagilmer\AppData\Roaming\Code\User\mcp.json
+   
 4. **Paste this text**
       ```
    {
