@@ -123,6 +123,10 @@ class KnowledgeGraphManager {
   }
 
   private async saveGraph(graph: KnowledgeGraph): Promise<void> {
+    // Ensure the directory exists before writing the file
+    const memoryDir = path.dirname(MEMORY_FILE_PATH);
+    await fs.mkdir(memoryDir, { recursive: true });
+    
     const lines = [
       ...graph.entities.map(e => JSON.stringify({ type: "entity", ...e })),
       ...graph.relations.map(r => JSON.stringify({ type: "relation", ...r })),
