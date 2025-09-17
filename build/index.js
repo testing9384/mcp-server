@@ -1,26 +1,21 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importDefault(require("express"));
-const cors_1 = __importDefault(require("cors"));
-const node_crypto_1 = require("node:crypto");
-const mcp_js_1 = require("@modelcontextprotocol/sdk/server/mcp.js");
-const streamableHttp_js_1 = require("@modelcontextprotocol/sdk/server/streamableHttp.js");
-const types_js_1 = require("@modelcontextprotocol/sdk/types.js");
-const types_js_2 = require("@modelcontextprotocol/sdk/types.js");
-const fs_1 = require("fs");
-const path_1 = __importDefault(require("path"));
-const url_1 = require("url");
-const filesystem_utils_js_1 = require("./filesystem-utils.js");
+import express from "express";
+import cors from "cors";
+import { randomUUID } from "node:crypto";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
+import { CallToolRequestSchema, ListToolsRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
+import { promises as fs } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { setAllowedDirectories, getAllowedDirectories, validatePath, getFileStats, readFileContent, writeFileContent, applyFileEdits, tailFile, headFile, searchFilesWithValidation, formatSize } from './filesystem-utils.js';
 // Define memory file path using environment variable with fallback
-const defaultMemoryPath = path_1.default.join(path_1.default.dirname((0, url_1.fileURLToPath)(import.meta.url)), 'memory.json');
+const defaultMemoryPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'memory.json');
 // If MEMORY_FILE_PATH is just a filename, put it in the same directory as the script
 const MEMORY_FILE_PATH = process.env.MEMORY_FILE_PATH
-    ? path_1.default.isAbsolute(process.env.MEMORY_FILE_PATH)
+    ? path.isAbsolute(process.env.MEMORY_FILE_PATH)
         ? process.env.MEMORY_FILE_PATH
-        : path_1.default.join(path_1.default.dirname((0, url_1.fileURLToPath)(import.meta.url)), process.env.MEMORY_FILE_PATH)
+        : path.join(path.dirname(fileURLToPath(import.meta.url)), process.env.MEMORY_FILE_PATH)
     : defaultMemoryPath;
 // Helper function to parse allowed directories from environment variable
 function parseAllowedDirectories(envVar) {
@@ -34,7 +29,7 @@ function parseAllowedDirectories(envVar) {
             return parsed.map((dir) => {
                 const dirStr = String(dir);
                 // Resolve relative paths to absolute paths
-                return path_1.default.isAbsolute(dirStr) ? dirStr : path_1.default.resolve(dirStr);
+                return path.isAbsolute(dirStr) ? dirStr : path.resolve(dirStr);
             });
         }
     }
@@ -48,12 +43,12 @@ function parseAllowedDirectories(envVar) {
         .filter(dir => dir.length > 0)
         .map(dir => {
         // Resolve relative paths to absolute paths
-        return path_1.default.isAbsolute(dir) ? dir : path_1.default.resolve(dir);
+        return path.isAbsolute(dir) ? dir : path.resolve(dir);
     });
 }
 // Helper to create a new MCP server instance with all resources/tools
 function getServer() {
-    const server = new mcp_js_1.McpServer({
+    const server = new Server({
         name: "open-context",
         version: "1.0.0",
     }, {
@@ -62,7 +57,7 @@ function getServer() {
             tools: {},
         },
     });
-    server.setRequestHandler(types_js_2.ListToolsRequestSchema, async () => {
+    server.setRequestHandler(ListToolsRequestSchema, async () => {
         return {
             tools: [
                 {
@@ -406,7 +401,7 @@ function getServer() {
             ],
         };
     });
-    server.setRequestHandler(types_js_2.CallToolRequestSchema, async (request) => {
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const { name, arguments: args } = request.params;
         // Memory/Knowledge graph tool handling
         if (name === "read_graph") {
@@ -437,10 +432,10 @@ function getServer() {
                 return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.openNodes(args.names), null, 2) }] };
             // Filesystem tool handling
             case "list_allowed_directories":
-                return { content: [{ type: "text", text: JSON.stringify((0, filesystem_utils_js_1.getAllowedDirectories)(), null, 2) }] };
+                return { content: [{ type: "text", text: JSON.stringify(getAllowedDirectories(), null, 2) }] };
             case "list_directory": {
-                const validatedPath = await (0, filesystem_utils_js_1.validatePath)(args.path);
-                const entries = await fs_1.promises.readdir(validatedPath, { withFileTypes: true });
+                const validatedPath = await validatePath(args.path);
+                const entries = await fs.readdir(validatedPath, { withFileTypes: true });
                 const result = entries.map(entry => ({
                     name: entry.name,
                     type: entry.isDirectory() ? 'directory' : 'file'
@@ -448,15 +443,15 @@ function getServer() {
                 return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
             }
             case "list_directory_with_sizes": {
-                const validatedPath = await (0, filesystem_utils_js_1.validatePath)(args.path);
+                const validatedPath = await validatePath(args.path);
                 const sortBy = args.sortBy || "name";
-                const entries = await fs_1.promises.readdir(validatedPath, { withFileTypes: true });
+                const entries = await fs.readdir(validatedPath, { withFileTypes: true });
                 const entriesWithSizes = await Promise.all(entries.map(async (entry) => {
-                    const fullPath = path_1.default.join(validatedPath, entry.name);
+                    const fullPath = path.join(validatedPath, entry.name);
                     let size = 0;
                     try {
                         if (entry.isFile()) {
-                            const stats = await fs_1.promises.stat(fullPath);
+                            const stats = await fs.stat(fullPath);
                             size = stats.size;
                         }
                     }
@@ -466,7 +461,7 @@ function getServer() {
                     return {
                         name: entry.name,
                         type: entry.isDirectory() ? 'directory' : 'file',
-                        size: entry.isFile() ? (0, filesystem_utils_js_1.formatSize)(size) : undefined,
+                        size: entry.isFile() ? formatSize(size) : undefined,
                         sizeBytes: size
                     };
                 }));
@@ -490,21 +485,21 @@ function getServer() {
                 return { content: [{ type: "text", text: JSON.stringify(cleanedEntries, null, 2) }] };
             }
             case "get_file_info": {
-                const validatedPath = await (0, filesystem_utils_js_1.validatePath)(args.path);
-                const info = await (0, filesystem_utils_js_1.getFileStats)(validatedPath);
+                const validatedPath = await validatePath(args.path);
+                const info = await getFileStats(validatedPath);
                 return { content: [{ type: "text", text: JSON.stringify(info, null, 2) }] };
             }
             case "read_text_file": {
-                const validatedPath = await (0, filesystem_utils_js_1.validatePath)(args.path);
+                const validatedPath = await validatePath(args.path);
                 let content;
                 if (args.head && typeof args.head === 'number') {
-                    content = await (0, filesystem_utils_js_1.headFile)(validatedPath, args.head);
+                    content = await headFile(validatedPath, args.head);
                 }
                 else if (args.tail && typeof args.tail === 'number') {
-                    content = await (0, filesystem_utils_js_1.tailFile)(validatedPath, args.tail);
+                    content = await tailFile(validatedPath, args.tail);
                 }
                 else {
-                    content = await (0, filesystem_utils_js_1.readFileContent)(validatedPath);
+                    content = await readFileContent(validatedPath);
                 }
                 return { content: [{ type: "text", text: content }] };
             }
@@ -513,8 +508,8 @@ function getServer() {
                 const results = [];
                 for (const filePath of paths) {
                     try {
-                        const validatedPath = await (0, filesystem_utils_js_1.validatePath)(filePath);
-                        const content = await (0, filesystem_utils_js_1.readFileContent)(validatedPath);
+                        const validatedPath = await validatePath(filePath);
+                        const content = await readFileContent(validatedPath);
                         results.push({ path: filePath, content });
                     }
                     catch (error) {
@@ -527,33 +522,33 @@ function getServer() {
                 return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
             }
             case "write_file": {
-                const validatedPath = await (0, filesystem_utils_js_1.validatePath)(args.path);
-                await (0, filesystem_utils_js_1.writeFileContent)(validatedPath, args.content);
+                const validatedPath = await validatePath(args.path);
+                await writeFileContent(validatedPath, args.content);
                 return { content: [{ type: "text", text: `Successfully wrote file: ${args.path}` }] };
             }
             case "edit_file": {
-                const validatedPath = await (0, filesystem_utils_js_1.validatePath)(args.path);
+                const validatedPath = await validatePath(args.path);
                 const edits = args.edits;
                 const dryRun = args.dryRun || false;
-                const diff = await (0, filesystem_utils_js_1.applyFileEdits)(validatedPath, edits, dryRun);
+                const diff = await applyFileEdits(validatedPath, edits, dryRun);
                 return { content: [{ type: "text", text: diff }] };
             }
             case "create_directory": {
-                const validatedPath = await (0, filesystem_utils_js_1.validatePath)(args.path);
-                await fs_1.promises.mkdir(validatedPath, { recursive: true });
+                const validatedPath = await validatePath(args.path);
+                await fs.mkdir(validatedPath, { recursive: true });
                 return { content: [{ type: "text", text: `Successfully created directory: ${args.path}` }] };
             }
             case "move_file": {
-                const validatedSource = await (0, filesystem_utils_js_1.validatePath)(args.source);
-                const validatedDestination = await (0, filesystem_utils_js_1.validatePath)(args.destination);
-                await fs_1.promises.rename(validatedSource, validatedDestination);
+                const validatedSource = await validatePath(args.source);
+                const validatedDestination = await validatePath(args.destination);
+                await fs.rename(validatedSource, validatedDestination);
                 return { content: [{ type: "text", text: `Successfully moved ${args.source} to ${args.destination}` }] };
             }
             case "search_files": {
-                const validatedPath = await (0, filesystem_utils_js_1.validatePath)(args.path);
+                const validatedPath = await validatePath(args.path);
                 const pattern = args.pattern;
                 const excludePatterns = args.excludePatterns || [];
-                const results = await (0, filesystem_utils_js_1.searchFilesWithValidation)(validatedPath, pattern, (0, filesystem_utils_js_1.getAllowedDirectories)(), { excludePatterns });
+                const results = await searchFilesWithValidation(validatedPath, pattern, getAllowedDirectories(), { excludePatterns });
                 return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
             }
             default:
@@ -562,9 +557,9 @@ function getServer() {
     });
     return server;
 }
-const app = (0, express_1.default)();
-app.use(express_1.default.json());
-app.use((0, cors_1.default)({
+const app = express();
+app.use(express.json());
+app.use(cors({
     origin: '*',
     exposedHeaders: ['Mcp-Session-Id'],
     allowedHeaders: ['Content-Type', 'mcp-session-id'],
@@ -578,9 +573,9 @@ app.post('/mcp', async (req, res) => {
     if (sessionId && transports[sessionId]) {
         transport = transports[sessionId];
     }
-    else if (!sessionId && (0, types_js_1.isInitializeRequest)(req.body)) {
-        transport = new streamableHttp_js_1.StreamableHTTPServerTransport({
-            sessionIdGenerator: () => (0, node_crypto_1.randomUUID)(),
+    else if (!sessionId && isInitializeRequest(req.body)) {
+        transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => randomUUID(),
             onsessioninitialized: (newSessionId) => {
                 transports[newSessionId] = transport;
             },
@@ -635,7 +630,7 @@ app.listen(PORT, (error) => {
 class KnowledgeGraphManager {
     async loadGraph() {
         try {
-            const data = await fs_1.promises.readFile(MEMORY_FILE_PATH, "utf-8");
+            const data = await fs.readFile(MEMORY_FILE_PATH, "utf-8");
             const lines = data.split("\n").filter(line => line.trim() !== "");
             return lines.reduce((graph, line) => {
                 const item = JSON.parse(line);
@@ -655,13 +650,13 @@ class KnowledgeGraphManager {
     }
     async saveGraph(graph) {
         // Ensure the directory exists before writing the file
-        const memoryDir = path_1.default.dirname(MEMORY_FILE_PATH);
-        await fs_1.promises.mkdir(memoryDir, { recursive: true });
+        const memoryDir = path.dirname(MEMORY_FILE_PATH);
+        await fs.mkdir(memoryDir, { recursive: true });
         const lines = [
             ...graph.entities.map(e => JSON.stringify({ type: "entity", ...e })),
             ...graph.relations.map(r => JSON.stringify({ type: "relation", ...r })),
         ];
-        await fs_1.promises.writeFile(MEMORY_FILE_PATH, lines.join("\n"));
+        await fs.writeFile(MEMORY_FILE_PATH, lines.join("\n"));
     }
     async createEntities(entities) {
         const graph = await this.loadGraph();
@@ -756,11 +751,11 @@ const knowledgeGraphManager = new KnowledgeGraphManager();
 // Default directories include current working directory and script directory
 const defaultAllowedDirs = [
     process.cwd(), // Current working directory
-    path_1.default.dirname((0, url_1.fileURLToPath)(import.meta.url)), // Directory containing this script
+    path.dirname(fileURLToPath(import.meta.url)), // Directory containing this script
 ];
 // Parse user-specified directories from environment variable
 const userAllowedDirs = parseAllowedDirectories(process.env.ALLOWED_DIRECTORIES);
 // Combine default and user-specified directories, removing duplicates
 const allowedDirs = [...new Set([...defaultAllowedDirs, ...userAllowedDirs])];
 console.log('Allowed directories:', allowedDirs);
-(0, filesystem_utils_js_1.setAllowedDirectories)(allowedDirs);
+setAllowedDirectories(allowedDirs);
