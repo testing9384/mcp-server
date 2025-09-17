@@ -24,11 +24,16 @@
            "-y",
            "@modelcontextprotocol/server-memory"],
          "env": {
-           "MEMORY_FILE_PATH": "/Users/saskiagilmer/Documents/custom/memory.json"
+           "MEMORY_FILE_PATH": "/Users/saskiagilmer/Documents/custom/memory.json",
+           "ALLOWED_DIRECTORIES": "C:/Users/saskiagilmer/Documents,C:/Users/saskiagilmer/source/repos"
          }
        }
    }
       ```
+
+   **Configuration Options:**
+   - `MEMORY_FILE_PATH`: Path to the memory.json file for knowledge graph storage
+   - `ALLOWED_DIRECTORIES`: Comma-separated list of directories the server can access, or JSON array format like `["C:/path1", "C:/path2"]`
 5. **For any updates, kill all Claude Desktop processes**
    
      Do this in Task Manager so you can kill background processes too
