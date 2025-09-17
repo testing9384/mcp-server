@@ -11,6 +11,10 @@
    npm run build
    node build/index.js
    ```
+
+(ignore following steps if running local client)
+
+
 2. **Navigate to MCP config update file**
 
    
