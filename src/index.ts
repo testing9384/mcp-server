@@ -122,8 +122,9 @@ function getServer() {
                     from: { type: "string", description: "The name of the entity where the relation starts" },
                     to: { type: "string", description: "The name of the entity where the relation ends" },
                     relationType: { type: "string", description: "The type of the relation" },
+                    weight: { type: "number", description: "A number between 1 and 5 inclusive that represents how strongly two nodes are related", minimum: 1, maximum: 5 },
                   },
-                  required: ["from", "to", "relationType"],
+                  required: ["from", "to", "relationType", "weight"],
                 },
               },
             },
@@ -209,8 +210,9 @@ function getServer() {
                     from: { type: "string", description: "The name of the entity where the relation starts" },
                     to: { type: "string", description: "The name of the entity where the relation ends" },
                     relationType: { type: "string", description: "The type of the relation" },
+                    weight: { type: "number", description: "A number between 1 and 5 inclusive that represents how strongly two nodes are related", minimum: 1, maximum: 5 },
                   },
-                  required: ["from", "to", "relationType"],
+                  required: ["from", "to", "relationType", "weight"],
                 },
                 description: "An array of relations to delete"
               },
@@ -666,6 +668,7 @@ interface Relation {
   from: string;
   to: string;
   relationType: string;
+  weight: number;
 }
 
 interface KnowledgeGraph {
@@ -718,7 +721,8 @@ class KnowledgeGraphManager {
     const newRelations = relations.filter(r => !graph.relations.some(existingRelation => 
       existingRelation.from === r.from && 
       existingRelation.to === r.to && 
-      existingRelation.relationType === r.relationType
+      existingRelation.relationType === r.relationType &&
+      existingRelation.weight === r.weight
     ));
     graph.relations.push(...newRelations);
     await this.saveGraph(graph);
@@ -763,7 +767,8 @@ class KnowledgeGraphManager {
     graph.relations = graph.relations.filter(r => !relations.some(delRelation => 
       r.from === delRelation.from && 
       r.to === delRelation.to && 
-      r.relationType === delRelation.relationType
+      r.relationType === delRelation.relationType &&
+      r.weight === delRelation.weight
     ));
     await this.saveGraph(graph);
   }
