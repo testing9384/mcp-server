@@ -19,7 +19,12 @@
 2. **Build the project**
    ```sh
    npm run build
-   node build/index.js
+   npm start
+   ```
+   
+   Or use the combined script:
+   ```sh
+   npm run dev
    ```
    
    The server is now running. 

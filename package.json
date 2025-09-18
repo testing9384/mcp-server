@@ -1,13 +1,17 @@
 {
   "name": "mcp-server",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "build/index.js",
   "type": "module",
   "bin": {
     "weather": "build/index.js"
   },
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "npm run build && npm start",
+    "prepublishOnly": "npm run build",
+    "prepack": "npm run build"
   },
   "files": [
     "build"
