@@ -4,4 +4,4 @@ I want you to respond to my question in three stages.
 
 2. The second stage is the conclusion drawing stage. In this stage, you will make multiple logical conclusions based on one or more nodes. The entity type should be conclusion. Each conclusion must have relations between the conclusion and its supporting evidence. Conclusions may be based on existing logical conclusions as well as file nodes. 
 
-3. The third stage is using the conclusions in the graph as context for your response. Here is my question: "Explain the execution flow of FIRE"
+3. The third stage is using the conclusions in the graph as context for your response. Here is my question: "Explain how create multiple entities works"
