@@ -37,8 +37,12 @@
    **Configuration Options:**
    - `MEMORY_FILE_PATH`: Path to the memory.json file for knowledge graph storage
    - `ALLOWED_DIRECTORIES`: Comma-separated list of directories the server can access, or JSON array format like `["C:/path1", "C:/path2"]`
-
-
+  
+     
+   Run these directly in the Powershell terminal. For example:
+      ```
+     "MEMORY_FILE_PATH": "/Users/saskiagilmer/Documents/custom_vs_code/test0/memory.json",
+      ```
 
 ## Appendix
 For STDIO servers, follow the same steps in VCCode but paste this text instead:
