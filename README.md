@@ -12,21 +12,36 @@
    node build/index.js
    ```
 
-(ignore following steps if running local client)
+
 
 
 2. **Navigate to MCP config update file**
 
-   
-   For Claude Desktop:
-   
-         C:\Users\saskiagilmer\AppData\Roaming\Claude\claude_desktop_config.json
 
    For VSCode:
    
          C:\Users\saskiagilmer\AppData\Roaming\Code\User\mcp.json
    
 4. **Paste this text**
+      ```
+   {
+        "servers": {
+      		"open-context": {
+      			"type": "http",
+      			"url": "http://localhost:3000/mcp"
+             },
+          }
+   }
+      ```
+
+   **Configuration Options:**
+   - `MEMORY_FILE_PATH`: Path to the memory.json file for knowledge graph storage
+   - `ALLOWED_DIRECTORIES`: Comma-separated list of directories the server can access, or JSON array format like `["C:/path1", "C:/path2"]`
+
+
+
+## Appendix
+For STDIO servers, follow the same steps in VCCode but paste this text instead:
       ```
    {
      "mcpServers": {
@@ -42,10 +57,10 @@
        }
    }
       ```
-
-   **Configuration Options:**
-   - `MEMORY_FILE_PATH`: Path to the memory.json file for knowledge graph storage
-   - `ALLOWED_DIRECTORIES`: Comma-separated list of directories the server can access, or JSON array format like `["C:/path1", "C:/path2"]`
-5. **For any updates, kill all Claude Desktop processes**
+   For Claude Desktop, you can find the config file here (only STDIO supported):
+   
+         C:\Users\saskiagilmer\AppData\Roaming\Claude\claude_desktop_config.json
+ **For any updates, kill all Claude Desktop processes**
    
      Do this in Task Manager so you can kill background processes too
+
