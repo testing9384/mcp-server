@@ -6,7 +6,17 @@
    npm install -D @types/node typescript
    ```
 
-1. **Build the project**
+1. **[Optional] Set Configuration Options:**
+   - `MEMORY_FILE_PATH`: Path to the memory.json file for knowledge graph storage
+   - `ALLOWED_DIRECTORIES`: Comma-separated list of directories the server can access, or JSON array format like `["C:/path1", "C:/path2"]`
+  
+     
+   Run these directly in the Powershell terminal. For example:
+      ```
+     "MEMORY_FILE_PATH": "/Users/saskiagilmer/Documents/custom_vs_code/test0/memory.json",
+      ```
+
+2. **Build the project**
    ```sh
    npm run build
    node build/index.js
@@ -15,7 +25,7 @@
 
 
 
-2. **Navigate to MCP config update file**
+3. **Navigate to MCP config update file**
 
 
    For VSCode:
@@ -34,15 +44,7 @@
    }
       ```
 
-   **Configuration Options:**
-   - `MEMORY_FILE_PATH`: Path to the memory.json file for knowledge graph storage
-   - `ALLOWED_DIRECTORIES`: Comma-separated list of directories the server can access, or JSON array format like `["C:/path1", "C:/path2"]`
-  
-     
-   Run these directly in the Powershell terminal. For example:
-      ```
-     "MEMORY_FILE_PATH": "/Users/saskiagilmer/Documents/custom_vs_code/test0/memory.json",
-      ```
+
 
 ## Appendix
 For STDIO servers, follow the same steps in VCCode but paste this text instead:
