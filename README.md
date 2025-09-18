@@ -21,18 +21,20 @@
    npm run build
    node build/index.js
    ```
+   
+   The server is now running. 
+3. **Connect to the client of your choice**
 
+## Option A: Use VSCode client
 
-
-
-3. **Navigate to MCP config update file**
+1. **Navigate to MCP config update file**
 
 
    For VSCode:
    
          C:\Users\saskiagilmer\AppData\Roaming\Code\User\mcp.json
    
-4. **Paste this text**
+2. **Paste this text**
       ```
    {
         "servers": {
@@ -44,7 +46,8 @@
    }
       ```
 
-
+## Option B: Use Custom Vis client
+Follow instructions in https://github.com/nicobburbano/mcp-vis
 
 ## Appendix
 For STDIO servers, follow the same steps in VCCode but paste this text instead:
