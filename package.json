@@ -20,9 +20,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@azure/msal-node": "^3.7.4",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
     "@modelcontextprotocol/sdk": "^1.18.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "@types/microsoft-graph": "^2.40.1",
     "cors": "^2.8.5",
     "diff": "^5.1.0",
     "express": "^5.1.0",
