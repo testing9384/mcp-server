@@ -24,6 +24,13 @@ import {
   searchFilesWithValidation,
   formatSize
 } from './filesystem-utils.js';
+import {
+  MicrosoftGraphClient,
+  createGraphClient,
+  isValidAccessToken,
+  GraphAuthConfig,
+  GraphFileResult
+} from './microsoft-graph-utils.js';
 
 // Define memory file path using environment variable with fallback
 const defaultMemoryPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'memory.json');
@@ -422,6 +429,53 @@ function getServer() {
             required: ["path", "pattern"],
           },
         },
+        // Microsoft Graph tools
+        {
+          name: "graph_search_files",
+          description: "Search for files in Microsoft OneDrive using Microsoft Graph API. Requires an access token to be provided.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              accessToken: { type: "string", description: "Microsoft Graph access token with Files.Read permission" },
+              query: { type: "string", description: "Search query to find files" },
+              top: { type: "number", description: "Maximum number of results to return (default: 25, max: 999)", minimum: 1, maximum: 999 },
+              skip: { type: "number", description: "Number of results to skip for pagination", minimum: 0 },
+              select: {
+                type: "array",
+                items: { type: "string" },
+                description: "Specific properties to retrieve (e.g., ['name', 'size', 'lastModifiedDateTime'])"
+              }
+            },
+            required: ["accessToken", "query"],
+          },
+        },
+        {
+          name: "graph_get_file",
+          description: "Get details of a specific file from Microsoft OneDrive by its ID.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              accessToken: { type: "string", description: "Microsoft Graph access token with Files.Read permission" },
+              fileId: { type: "string", description: "The ID of the file to retrieve" }
+            },
+            required: ["accessToken", "fileId"],
+          },
+        },
+        {
+          name: "graph_list_folder",
+          description: "List contents of a folder in Microsoft OneDrive. Use 'root' as folderId for the root folder.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              accessToken: { type: "string", description: "Microsoft Graph access token with Files.Read permission" },
+              folderId: { type: "string", description: "The ID of the folder to list (use 'root' for root folder)", default: "root" },
+              top: { type: "number", description: "Maximum number of results to return", minimum: 1 },
+              skip: { type: "number", description: "Number of results to skip for pagination", minimum: 0 },
+              orderBy: { type: "string", description: "Property to sort by (e.g., 'name', 'lastModifiedDateTime')" }
+            },
+            required: ["accessToken"],
+          },
+        },
       ],
     };
   });
@@ -574,6 +628,88 @@ function getServer() {
           { excludePatterns }
         );
         return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
+      }
+      // Microsoft Graph tool handling
+      case "graph_search_files": {
+        const accessToken = args.accessToken as string;
+        const query = args.query as string;
+        const top = args.top as number | undefined;
+        const skip = args.skip as number | undefined;
+        const select = args.select as string[] | undefined;
+
+        if (!isValidAccessToken(accessToken)) {
+          throw new Error("Invalid access token provided");
+        }
+
+        try {
+          const graphClient = createGraphClient({ 
+            clientId: "dummy", // clientId not used when providing access token directly
+            accessToken 
+          });
+          
+          const results = await graphClient.searchFiles(query, {
+            top: top || 25,
+            skip,
+            select
+          });
+
+          return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
+        } catch (error) {
+          throw new Error(`Microsoft Graph search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+      case "graph_get_file": {
+        const accessToken = args.accessToken as string;
+        const fileId = args.fileId as string;
+
+        if (!isValidAccessToken(accessToken)) {
+          throw new Error("Invalid access token provided");
+        }
+
+        try {
+          const graphClient = createGraphClient({ 
+            clientId: "dummy", 
+            accessToken 
+          });
+          
+          const file = await graphClient.getFileById(fileId);
+          
+          if (!file) {
+            return { content: [{ type: "text", text: "File not found" }] };
+          }
+
+          return { content: [{ type: "text", text: JSON.stringify(file, null, 2) }] };
+        } catch (error) {
+          throw new Error(`Microsoft Graph file retrieval failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+      case "graph_list_folder": {
+        const accessToken = args.accessToken as string;
+        const folderId = (args.folderId as string) || "root";
+        const top = args.top as number | undefined;
+        const skip = args.skip as number | undefined;
+        const orderBy = args.orderBy as string | undefined;
+
+        if (!isValidAccessToken(accessToken)) {
+          throw new Error("Invalid access token provided");
+        }
+
+        try {
+          const graphClient = createGraphClient({ 
+            clientId: "dummy", 
+            accessToken 
+          });
+          
+          const contents = await graphClient.listFolderContents(folderId, {
+            top,
+            skip,
+            orderBy
+          });
+
+          return { content: [{ type: "text", text: JSON.stringify(contents, null, 2) }] };
+        } catch (error) {
+          throw new Error(`Microsoft Graph folder listing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
       }
       default:
         throw new Error(`Unknown tool: ${name}`);

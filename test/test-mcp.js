@@ -105,7 +105,28 @@ async function testMCPServer() {
     if (toolsResponse.statusCode === 200) {
       console.log('✅ Tools list successful!');
       if (toolsResponse.body && toolsResponse.body.result && toolsResponse.body.result.tools) {
-        console.log(`Found ${toolsResponse.body.result.tools.length} tools`);
+        const tools = toolsResponse.body.result.tools;
+        console.log(`Found ${tools.length} tools`);
+        
+        // List Microsoft Graph tools specifically
+        const graphTools = tools.filter(tool => tool.name.startsWith('graph_'));
+        console.log(`\n🔍 MICROSOFT GRAPH TOOLS FOUND: ${graphTools.length}`);
+        graphTools.forEach((tool, index) => {
+          console.log(`  ${index + 1}. ${tool.name} - ${tool.description}`);
+        });
+        
+        if (graphTools.length === 0) {
+          console.log('❌ No Microsoft Graph tools found!');
+        } else {
+          console.log('✅ Microsoft Graph tools are properly registered!');
+        }
+        
+        // List all tools for reference
+        console.log('\n📋 ALL TOOLS:');
+        tools.forEach((tool, index) => {
+          const desc = tool.description.length > 60 ? tool.description.substring(0, 60) + '...' : tool.description;
+          console.log(`  ${index + 1}. ${tool.name} - ${desc}`);
+        });
       }
     } else {
       console.log('❌ Tools list failed');
@@ -130,6 +151,34 @@ async function testMCPServer() {
       console.log('✅ Tool call successful!');
     } else {
       console.log('❌ Tool call failed');
+    }
+
+    // Test 4: Test Microsoft Graph tool (without actual access token)
+    console.log('\n4. Testing Microsoft Graph tool - graph_search_files...');
+    const graphToolCallRequest = {
+      jsonrpc: "2.0",
+      id: 4,
+      method: "tools/call",
+      params: {
+        name: "graph_search_files",
+        arguments: {
+          accessToken: "test-token",
+          query: "test"
+        }
+      }
+    };
+
+    const graphToolCallResponse = await makeRequestWithSession(graphToolCallRequest, sessionId);
+    console.log('Graph tool call response status:', graphToolCallResponse.statusCode);
+    
+    if (graphToolCallResponse.statusCode === 200) {
+      console.log('✅ Graph tool is accessible (though would fail with invalid token)');
+      if (graphToolCallResponse.body && graphToolCallResponse.body.error) {
+        console.log('Expected error:', graphToolCallResponse.body.error.message);
+      }
+    } else {
+      console.log('❌ Graph tool call failed');
+      console.log('Response:', JSON.stringify(graphToolCallResponse.body, null, 2));
     }
 
   } catch (error) {
