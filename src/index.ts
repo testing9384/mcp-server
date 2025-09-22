@@ -437,7 +437,14 @@ function getServer() {
             type: "object",
             properties: {
               accessToken: { type: "string", description: "Microsoft Graph access token with Files.Read permission" },
-              query: { type: "string", description: "Search query to find files" }
+              query: { type: "string", description: "Search query to find files" },
+              top: { type: "number", description: "Maximum number of results to return (default: 25, max: 999)", minimum: 1, maximum: 999 },
+              skip: { type: "number", description: "Number of results to skip for pagination", minimum: 0 },
+              select: {
+                type: "array",
+                items: { type: "string" },
+                description: "Specific properties to retrieve (e.g., ['name', 'size', 'lastModifiedDateTime'])"
+              }
             },
             required: ["accessToken", "query"],
           },
@@ -461,21 +468,12 @@ function getServer() {
             type: "object",
             properties: {
               accessToken: { type: "string", description: "Microsoft Graph access token with Files.Read permission" },
-              folderId: { type: "string", description: "The ID of the folder to list (use 'root' for root folder)" }
+              folderId: { type: "string", description: "The ID of the folder to list (use 'root' for root folder)", default: "root" },
+              top: { type: "number", description: "Maximum number of results to return", minimum: 1 },
+              skip: { type: "number", description: "Number of results to skip for pagination", minimum: 0 },
+              orderBy: { type: "string", description: "Property to sort by (e.g., 'name', 'lastModifiedDateTime')" }
             },
             required: ["accessToken"],
-          },
-        },
-        {
-          name: "graph_read_text_file",
-          description: "Read content of a text file from Microsoft OneDrive as text.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              accessToken: { type: "string", description: "Microsoft Graph access token with Files.Read permission" },
-              fileId: { type: "string", description: "The ID of the file to read" }
-            },
-            required: ["accessToken", "fileId"],
           },
         },
       ],
@@ -635,6 +633,7 @@ function getServer() {
       case "graph_search_files": {
         const accessToken = args.accessToken as string;
         const query = args.query as string;
+        const top = args.top as number | undefined;
 
         if (!isValidAccessToken(accessToken)) {
           throw new Error("Invalid access token provided");
@@ -646,7 +645,7 @@ function getServer() {
             accessToken 
           });
           
-          const results = await graphClient.searchFiles(query);
+          const results = await graphClient.searchFiles(query, top);
 
           return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
         } catch (error) {
@@ -697,27 +696,6 @@ function getServer() {
           return { content: [{ type: "text", text: JSON.stringify(contents, null, 2) }] };
         } catch (error) {
           throw new Error(`Microsoft Graph folder listing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-      }
-      case "graph_read_text_file": {
-        const accessToken = args.accessToken as string;
-        const fileId = args.fileId as string;
-
-        if (!isValidAccessToken(accessToken)) {
-          throw new Error("Invalid access token provided");
-        }
-
-        try {
-          const graphClient = createGraphClient({ 
-            clientId: "dummy", 
-            accessToken 
-          });
-          
-          const content = await graphClient.readTextFile(fileId);
-
-          return { content: [{ type: "text", text: content }] };
-        } catch (error) {
-          throw new Error(`Microsoft Graph text file reading failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
       default:

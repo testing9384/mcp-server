@@ -43,19 +43,32 @@ export class MicrosoftGraphClient {
   /**
    * Search for files in the user's OneDrive
    * @param query The search query string
+   * @param top Optional maximum number of results to return (default 25)
    * @returns Array of matching files
    */
-  async searchFiles(query: string): Promise<GraphFileResult[]> {
+  async searchFiles(query: string, top: number = 25): Promise<GraphFileResult[]> {
     if (!this.client) {
       throw new Error('Microsoft Graph client not initialized');
     }
 
     try {
-      // Build the API endpoint
-      let apiPath = `/me/drive/root/search(q='${encodeURIComponent(query)}')`;
+      // Build the API endpoint with query parameters
+      const apiPath = `/me/drive/root/search(q='${encodeURIComponent(query)}')`;
       
-
-      const result = await this.client.api(apiPath).get();
+      // Use select to get only needed fields and orderby to sort results
+      const result = await this.client.api(apiPath)
+        .select('id,name,webUrl,lastModifiedDateTime,size,file')
+        .top(top)
+        .get();
+      
+      // Check if result contains value property and it's an array
+      if (!result.value || !Array.isArray(result.value)) {
+        console.warn('Search returned unexpected result format:', result);
+        return [];
+      }
+      
+      // Log the number of results found for debugging
+      console.log(`Search found ${result.value.length} results for query: "${query}"`);
       
       return result.value.map((file: any) => ({
         id: file.id,
@@ -66,6 +79,7 @@ export class MicrosoftGraphClient {
         mimeType: file.file?.mimeType,
       }));
     } catch (error) {
+      console.error('Graph search error:', error);
       throw new Error(`Failed to search files: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
