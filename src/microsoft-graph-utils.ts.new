@@ -1,0 +1,415 @@
+import { Client } from '@microsoft/microsoft-graph-client';
+url: string;
+lastModified: string;
+lastModified: string;
+size: number;
+tenantId ?  : string;
+accessToken ?  : string;
+export class MicrosoftGraphClient {
+}
+client = null;
+config: MicrosoftGraphConfig;
+export class MicrosoftGraphClient {
+    constructor(config) {
+        this.client = null;
+    }
+}
+this.config = config;
+this.initializeClient();
+constructor(config, GraphAuthConfig);
+{
+}
+this.config = config;
+this.initializeClient();
+normalizeAccessToken(token, string);
+string;
+{ }
+// Trim and remove optional 'Bearer ' prefix if present
+return token.trim().replace(/^Bearer\s+/i, '');
+initializeClient();
+void {};
+if (this.config.accessToken) {
+    initializeClient();
+    {
+        const authProvider = (done) => {
+            if (this.config.accessToken) {
+                done(null, this.config.accessToken);
+                try { }
+                finally // Use provided access token
+                 { }
+                ;
+                // Use provided access token
+                const rawToken = this.normalizeAccessToken(this.config.accessToken);
+                this.client = Client.init({
+                    const: authProvider = (done) => {
+                        authProvider: authProvider;
+                        done(null, rawToken);
+                    }
+                });
+            }
+            ;
+        }, { throw: , new: Error };
+        ('Access token is required for Microsoft Graph authentication');
+        this.client = Client.init({}, authProvider, authProvider);
+    }
+    debugLogging: false; // Set to true to see detailed request/response logs
+}
+; /**
+
+} catch (err) {   * Search for files in the user's OneDrive
+
+console.error('Error initializing Microsoft Graph client:', err);   * @param query The search query string
+
+throw new Error(`Failed to initialize Microsoft Graph client: ${err instanceof Error ? err.message : 'Unknown error'}`);   * @param options Optional search parameters
+
+}   * @returns Array of matching files
+
+} else {   */
+throw new Error('Access token is required for Microsoft Graph authentication');
+async;
+searchFiles(query, string, options ?  : {}, top ?  : number);
+skip ?  : number;
+select ?  : string[];
+/**  }): Promise<GraphFileResult[]> {
+
+ * Search for files in the user's OneDrive    if (!this.client) {
+
+ * @param query The search query string      throw new Error('Microsoft Graph client not initialized');
+
+ * @returns Array of matching files    }
+
+ */
+async;
+searchFiles(query, string);
+Promise < GraphFileInfo[] > { try: {
+        : .client
+    } };
+{ // Build the API endpoint
+    throw new Error('Microsoft Graph client not initialized');
+    let apiPath = `/me/drive/root/search(q='${encodeURIComponent(query)}')`;
+}
+const queryParams = [];
+try {
+    // Build the API endpoint      if (options?.top) {
+    // Use the search endpoint instead of the root/search approach        queryParams.push(`$top=${options.top}`);
+    const apiPath = `/me/drive/search(q='${encodeURIComponent(query)}')`;
+}
+finally {
+}
+const result = await this.client.api(apiPath).get();
+if (options?.skip) {
+    // Debug logging - if result doesn't have value property or it's empty        queryParams.push(`$skip=${options.skip}`);
+    if (!result.value || result.value.length === 0) { }
+    console.log('Search returned no results. API Path:', apiPath);
+}
+else {
+    if (options?.select && options.select.length > 0) {
+        console.log(`Search found ${result.value.length} results`);
+        queryParams.push(`$select=${options.select.join(',')}`);
+    }
+}
+return result.value.map((file) => ({ if(queryParams) { }, : .length > 0 }), {
+    id: file.id, apiPath
+} `?${queryParams.join('&')}`);
+name: file.name, ;
+url: file.webUrl,
+    lastModified;
+file.lastModifiedDateTime, ;
+const result = await this.client.api(apiPath).get();
+size: file.size,
+    mimeType;
+file.file?.mimeType, ;
+return result.value.map((file) => ({}));
+id: file.id,
+;
+try { }
+catch (error) {
+    name: file.name,
+        console.error('Search error:', error);
+    url: file.webUrl,
+    ;
+    if (error instanceof Error) {
+        lastModified: file.lastModifiedDateTime,
+            console.error('Error details:', error.message);
+        size: file.size,
+            mimeType;
+        file.file?.mimeType,
+        ;
+        // Check for common Microsoft Graph API errors      }));
+        if (error.message.includes('Signature is invalid')) { }
+        try { }
+        catch (error) {
+            console.error('Token signature validation failed. The token may be expired, malformed, or tampered with.');
+            throw new Error(`Failed to search files: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            throw new Error('Failed to search files: Token signature is invalid. Please obtain a new access token.');
+        }
+    }
+}
+if (error.message.includes('InvalidAuthenticationToken')) { /**
+
+  console.error('Invalid authentication token. The token may be expired or from the wrong environment.');   * Get details of a specific file by ID
+
+  throw new Error('Failed to search files: Invalid authentication token. Please obtain a new access token.');   * @param fileId The ID of the file
+
+}   * @returns File details
+
+*/
+    if ('statusCode' in error) {
+        async;
+        getFileById(fileId, string);
+        Promise < GraphFileResult | null > {
+            console, : .error('Status code:', error.statusCode), : .client
+        };
+        {
+            if (error.statusCode === 401) {
+                throw new Error('Microsoft Graph client not initialized');
+                throw new Error('Failed to search files: Unauthorized. Please check your access token permissions and expiration.');
+            }
+        }
+    }
+    try {
+    }
+    finally { }
+    const file = await this.client.api(`/me/drive/items/${fileId}`).get();
+    throw new Error(`Failed to search files: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return {};
+    id: file.id,
+    ;
+}
+name: file.name,
+    url;
+file.webUrl,
+;
+try { }
+catch (error) {
+    async;
+    getFileById(fileId, string);
+    Promise < GraphFileInfo | null > { if(error) { }, instanceof: Error && error.message.includes('404') };
+    {
+        if (!this.client) {
+            return null;
+            throw new Error('Microsoft Graph client not initialized');
+        }
+    }
+    throw new Error(`Failed to get file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+}
+try { }
+finally {
+}
+const file = await this.client.api(`/me/drive/items/${fileId}`).get();
+/**
+
+return {   * List files in a specific folder
+
+id: file.id,   * @param folderId The ID of the folder (use 'root' for root folder)
+
+name: file.name,   * @param options Optional parameters
+
+url: file.webUrl,   * @returns Array of files and folders
+
+lastModified: file.lastModifiedDateTime,   */
+size: file.size, async;
+listFolderContents(folderId, string = 'root', options ?  : {
+    mimeType: file.file?.mimeType, top: number
+});
+skip ?  : number;
+try { }
+catch (error) {
+    orderBy ?  : string;
+    if (error instanceof Error && error.message.includes('404')) { }
+    Promise < GraphFileResult[] > {
+        return: null, : .client
+    };
+    {
+    }
+    throw new Error('Microsoft Graph client not initialized');
+    throw new Error(`Failed to get file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+}
+try {
+    let apiPath = `/me/drive/items/${folderId}/children`;
+    /**
+  
+     * List files in a specific folder      const queryParams: string[] = [];
+  
+     * @param folderId The ID of the folder (use 'root' for root folder)
+  
+     * @returns Array of files and folders      if (options?.top) {
+  
+     */ queryParams.push(`$top=${options.top}`);
+    async;
+    listFolderContents(folderId, string = 'root');
+    Promise < GraphFileInfo[] > {};
+    if (!this.client) {
+        throw new Error('Microsoft Graph client not initialized');
+        if (options?.skip) {
+        }
+        queryParams.push(`$skip=${options.skip}`);
+    }
+    try {
+        const apiPath = `/me/drive/items/${folderId}/children`;
+        if (options?.orderBy) {
+            const result = await this.client.api(apiPath).get();
+            queryParams.push(`$orderby=${options.orderBy}`);
+        }
+        return result.value.map((item) => ({
+            id: item.id, if(queryParams) { }, : .length > 0
+        }), {
+            name: item.name, apiPath
+        } `?${queryParams.join('&')}`);
+        url: item.webUrl, ;
+    }
+    finally {
+    }
+    lastModified: item.lastModifiedDateTime,
+        size;
+    item.size, ;
+    const result = await this.client.api(apiPath).get();
+    mimeType: item.file?.mimeType || (item.folder ? 'folder' : undefined),
+    ;
+}
+finally { }
+;
+return result.value.map((item) => ({}));
+try { }
+catch (error) {
+    id: item.id,
+    ;
+    throw new Error(`Failed to list folder contents: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    name: item.name,
+    ;
+}
+url: item.webUrl,
+;
+lastModified: item.lastModifiedDateTime,
+    size;
+item.size,
+;
+async;
+downloadFile(fileId, string);
+Promise < Buffer > {};
+if (!this.client) {
+    throw new Error('Microsoft Graph client not initialized'); /**
+
+  }   * Download file content
+
+ * @param fileId The ID of the file
+
+  try {   * @returns File content as buffer
+
+    const content = await this.client.api(`/me/drive/items/${fileId}/content`).get();   */
+    return content;
+    async;
+    downloadFile(fileId, string);
+    Promise < Buffer > {};
+    try { }
+    catch (error) {
+        if (!this.client) {
+            throw new Error(`Failed to download file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            throw new Error('Microsoft Graph client not initialized');
+        }
+    }
+}
+try {
+    /**      const content = await this.client.api(`/me/drive/items/${fileId}/content`).get();
+  
+     * Read text file content from OneDrive      return content;
+  
+     * @param fileId The ID of the file to read    } catch (error) {
+  
+     * @param encoding Optional text encoding (default: 'utf8')      throw new Error(`Failed to download file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  
+     * @returns File content as text    }
+  
+     */ }
+finally {
+}
+async;
+readTextFile(fileId, string, encoding, BufferEncoding = 'utf8');
+Promise < string > {};
+if (!this.client) {
+    throw new Error('Microsoft Graph client not initialized'); /**
+
+  } * Factory function to create a Microsoft Graph client instance
+
+* @param config Authentication configuration
+
+  try { * @returns MicrosoftGraphClient instance
+
+    // First get the file metadata to check if it's a text file */
+    const fileInfo = await this.getFileById(fileId);
+    export function createGraphClient(config) {
+        if (!fileInfo) {
+            return new MicrosoftGraphClient(config);
+            throw new Error('File not found');
+        }
+    }
+    /**
+    
+          // Verify it's a text file by MIME type if available * Helper function to validate access token format
+    
+          if ( * @param token The access token to validate
+    
+            fileInfo.mimeType && * @returns boolean indicating if token appears valid
+    
+            !fileInfo.mimeType.startsWith('text/') && */
+    !fileInfo.mimeType.includes('json') && ;
+    export function isValidAccessToken(token) {
+        !fileInfo.mimeType.includes('xml') && ;
+        return Boolean(token && token.trim().length > 0 && !token.includes(' '));
+        !fileInfo.mimeType.includes('javascript') && ;
+    }
+    !fileInfo.mimeType.includes('markdown') &&
+        !fileInfo.mimeType.includes('csv');
+    {
+        console.warn(`File may not be a text file. MIME type: ${fileInfo.mimeType}`);
+    }
+    // Download file content as buffer
+    const buffer = await this.downloadFile(fileId);
+    // Convert buffer to string with specified encoding
+    return buffer.toString(encoding);
+}
+try { }
+catch (error) {
+    throw new Error(`Failed to read text file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+}
+/**
+ * Factory function to create a Microsoft Graph client instance
+ * @param config Authentication configuration
+ * @returns MicrosoftGraphClient instance
+ */
+export function createGraphClient(config) {
+    return new MicrosoftGraphClient(config);
+}
+/**
+ * Helper function to validate access token format
+ * @param token The access token to validate
+ * @returns boolean indicating if token appears valid
+ */
+export function isValidAccessToken(token) {
+    // Normalize token (remove optional 'Bearer ' prefix)
+    const normalized = (token || '').trim().replace(/^Bearer\s+/i, '');
+    // Ensure token is present
+    if (!normalized || normalized.length === 0) {
+        console.log('Token validation failed: Token is empty');
+        return false;
+    }
+    // If it looks like a JWT, perform lightweight checks; otherwise accept as opaque
+    const parts = normalized.split('.');
+    if (parts.length === 3) {
+        try {
+            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+            if (payload.exp && payload.exp < Date.now() / 1000) {
+                console.log('Token validation failed: Token has expired');
+                return false;
+            }
+            return true;
+        }
+        catch (err) {
+            // If parsing fails, treat as potentially opaque and accept
+            console.log('Token payload not parseable; treating as opaque token');
+            return true;
+        }
+    }
+    // Accept non-JWT tokens (opaque tokens) as valid for pass-through
+    return true;
+}

@@ -101,6 +101,25 @@ List contents of a folder in OneDrive.
 }
 ```
 
+### 4. `graph_read_text_file`
+Read a text file's content from OneDrive.
+
+**Parameters:**
+- `accessToken` (required): Microsoft Graph access token
+- `fileId` (required): The ID of the file to read
+- `encoding` (optional): Text encoding to use (default: "utf8")
+
+**Example:**
+```json
+{
+  "name": "graph_read_text_file",
+  "arguments": {
+    "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIs...",
+    "fileId": "01BYE5RZ56Y2GOVW7725BZO354PWSELRRZ"
+  }
+}
+```
+
 ## Response Format
 
 All tools return file information in the following format:
