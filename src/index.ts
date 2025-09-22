@@ -437,14 +437,7 @@ function getServer() {
             type: "object",
             properties: {
               accessToken: { type: "string", description: "Microsoft Graph access token with Files.Read permission" },
-              query: { type: "string", description: "Search query to find files" },
-              top: { type: "number", description: "Maximum number of results to return (default: 25, max: 999)", minimum: 1, maximum: 999 },
-              skip: { type: "number", description: "Number of results to skip for pagination", minimum: 0 },
-              select: {
-                type: "array",
-                items: { type: "string" },
-                description: "Specific properties to retrieve (e.g., ['name', 'size', 'lastModifiedDateTime'])"
-              }
+              query: { type: "string", description: "Search query to find files" }
             },
             required: ["accessToken", "query"],
           },
@@ -468,10 +461,7 @@ function getServer() {
             type: "object",
             properties: {
               accessToken: { type: "string", description: "Microsoft Graph access token with Files.Read permission" },
-              folderId: { type: "string", description: "The ID of the folder to list (use 'root' for root folder)", default: "root" },
-              top: { type: "number", description: "Maximum number of results to return", minimum: 1 },
-              skip: { type: "number", description: "Number of results to skip for pagination", minimum: 0 },
-              orderBy: { type: "string", description: "Property to sort by (e.g., 'name', 'lastModifiedDateTime')" }
+              folderId: { type: "string", description: "The ID of the folder to list (use 'root' for root folder)" }
             },
             required: ["accessToken"],
           },
@@ -483,8 +473,7 @@ function getServer() {
             type: "object",
             properties: {
               accessToken: { type: "string", description: "Microsoft Graph access token with Files.Read permission" },
-              fileId: { type: "string", description: "The ID of the file to read" },
-              encoding: { type: "string", description: "Text encoding to use (default: 'utf8')", default: "utf8" }
+              fileId: { type: "string", description: "The ID of the file to read" }
             },
             required: ["accessToken", "fileId"],
           },
@@ -646,9 +635,6 @@ function getServer() {
       case "graph_search_files": {
         const accessToken = args.accessToken as string;
         const query = args.query as string;
-        const top = args.top as number | undefined;
-        const skip = args.skip as number | undefined;
-        const select = args.select as string[] | undefined;
 
         if (!isValidAccessToken(accessToken)) {
           throw new Error("Invalid access token provided");
@@ -660,11 +646,7 @@ function getServer() {
             accessToken 
           });
           
-          const results = await graphClient.searchFiles(query, {
-            top: top || 25,
-            skip,
-            select
-          });
+          const results = await graphClient.searchFiles(query);
 
           return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
         } catch (error) {
@@ -699,9 +681,6 @@ function getServer() {
       case "graph_list_folder": {
         const accessToken = args.accessToken as string;
         const folderId = (args.folderId as string) || "root";
-        const top = args.top as number | undefined;
-        const skip = args.skip as number | undefined;
-        const orderBy = args.orderBy as string | undefined;
 
         if (!isValidAccessToken(accessToken)) {
           throw new Error("Invalid access token provided");
@@ -713,11 +692,7 @@ function getServer() {
             accessToken 
           });
           
-          const contents = await graphClient.listFolderContents(folderId, {
-            top,
-            skip,
-            orderBy
-          });
+          const contents = await graphClient.listFolderContents(folderId);
 
           return { content: [{ type: "text", text: JSON.stringify(contents, null, 2) }] };
         } catch (error) {
@@ -727,7 +702,6 @@ function getServer() {
       case "graph_read_text_file": {
         const accessToken = args.accessToken as string;
         const fileId = args.fileId as string;
-        const encoding = args.encoding as BufferEncoding || "utf8";
 
         if (!isValidAccessToken(accessToken)) {
           throw new Error("Invalid access token provided");
@@ -739,7 +713,7 @@ function getServer() {
             accessToken 
           });
           
-          const content = await graphClient.readTextFile(fileId, encoding);
+          const content = await graphClient.readTextFile(fileId);
 
           return { content: [{ type: "text", text: content }] };
         } catch (error) {

@@ -44,9 +44,6 @@ Search for files in OneDrive using a query string.
 **Parameters:**
 - `accessToken` (required): Microsoft Graph access token
 - `query` (required): Search query string
-- `top` (optional): Maximum number of results (1-999, default: 25)
-- `skip` (optional): Number of results to skip for pagination
-- `select` (optional): Array of specific properties to retrieve
 
 **Example:**
 ```json
@@ -54,8 +51,7 @@ Search for files in OneDrive using a query string.
   "name": "graph_search_files",
   "arguments": {
     "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIs...",
-    "query": "presentation",
-    "top": 10
+    "query": "presentation"
   }
 }
 ```
@@ -83,20 +79,13 @@ List contents of a folder in OneDrive.
 
 **Parameters:**
 - `accessToken` (required): Microsoft Graph access token
-- `folderId` (optional): The ID of the folder to list (default: "root")
-- `top` (optional): Maximum number of results to return
-- `skip` (optional): Number of results to skip for pagination
-- `orderBy` (optional): Property to sort by (e.g., "name", "lastModifiedDateTime")
 
 **Example:**
 ```json
 {
   "name": "graph_list_folder",
   "arguments": {
-    "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIs...",
-    "folderId": "root",
-    "top": 20,
-    "orderBy": "lastModifiedDateTime"
+    "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIs..."
   }
 }
 ```
@@ -107,7 +96,6 @@ Read a text file's content from OneDrive.
 **Parameters:**
 - `accessToken` (required): Microsoft Graph access token
 - `fileId` (required): The ID of the file to read
-- `encoding` (optional): Text encoding to use (default: "utf8")
 
 **Example:**
 ```json

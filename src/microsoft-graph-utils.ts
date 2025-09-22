@@ -25,17 +25,11 @@ export class MicrosoftGraphClient {
     this.initializeClient();
   }
 
-  normalizeAccessToken(token: string): string {
-    // Trim and remove optional 'Bearer ' prefix if present
-    return token.trim().replace(/^Bearer\s+/i, '');
-  }
-
   private initializeClient(): void {
     if (this.config.accessToken) {
       // Use provided access token
       const authProvider: AuthProvider = (done) => {
-        const rawToken = this.normalizeAccessToken(this.config.accessToken!);
-        done(null, rawToken);
+        done(null, this.config.accessToken!);
       };
 
       this.client = Client.init({
@@ -49,14 +43,9 @@ export class MicrosoftGraphClient {
   /**
    * Search for files in the user's OneDrive
    * @param query The search query string
-   * @param options Optional search parameters
    * @returns Array of matching files
    */
-  async searchFiles(query: string, options?: {
-    top?: number;
-    skip?: number;
-    select?: string[];
-  }): Promise<GraphFileResult[]> {
+  async searchFiles(query: string): Promise<GraphFileResult[]> {
     if (!this.client) {
       throw new Error('Microsoft Graph client not initialized');
     }
@@ -65,23 +54,6 @@ export class MicrosoftGraphClient {
       // Build the API endpoint
       let apiPath = `/me/drive/root/search(q='${encodeURIComponent(query)}')`;
       
-      const queryParams: string[] = [];
-      
-      if (options?.top) {
-        queryParams.push(`$top=${options.top}`);
-      }
-      
-      if (options?.skip) {
-        queryParams.push(`$skip=${options.skip}`);
-      }
-      
-      if (options?.select && options.select.length > 0) {
-        queryParams.push(`$select=${options.select.join(',')}`);
-      }
-      
-      if (queryParams.length > 0) {
-        apiPath += `?${queryParams.join('&')}`;
-      }
 
       const result = await this.client.api(apiPath).get();
       
@@ -130,14 +102,9 @@ export class MicrosoftGraphClient {
   /**
    * List files in a specific folder
    * @param folderId The ID of the folder (use 'root' for root folder)
-   * @param options Optional parameters
    * @returns Array of files and folders
    */
-  async listFolderContents(folderId: string = 'root', options?: {
-    top?: number;
-    skip?: number;
-    orderBy?: string;
-  }): Promise<GraphFileResult[]> {
+  async listFolderContents(folderId: string = 'root'): Promise<GraphFileResult[]> {
     if (!this.client) {
       throw new Error('Microsoft Graph client not initialized');
     }
@@ -145,23 +112,6 @@ export class MicrosoftGraphClient {
     try {
       let apiPath = `/me/drive/items/${folderId}/children`;
       
-      const queryParams: string[] = [];
-      
-      if (options?.top) {
-        queryParams.push(`$top=${options.top}`);
-      }
-      
-      if (options?.skip) {
-        queryParams.push(`$skip=${options.skip}`);
-      }
-      
-      if (options?.orderBy) {
-        queryParams.push(`$orderby=${options.orderBy}`);
-      }
-      
-      if (queryParams.length > 0) {
-        apiPath += `?${queryParams.join('&')}`;
-      }
 
       const result = await this.client.api(apiPath).get();
       
@@ -199,10 +149,9 @@ export class MicrosoftGraphClient {
   /**
    * Read text file content from OneDrive
    * @param fileId The ID of the file to read
-   * @param encoding Optional text encoding (default: 'utf8')
    * @returns File content as text
    */
-  async readTextFile(fileId: string, encoding: BufferEncoding = 'utf8'): Promise<string> {
+  async readTextFile(fileId: string): Promise<string> {
     if (!this.client) {
       throw new Error('Microsoft Graph client not initialized');
     }
@@ -231,7 +180,7 @@ export class MicrosoftGraphClient {
       const buffer = await this.downloadFile(fileId);
 
       // Convert buffer to string with specified encoding
-      return buffer.toString(encoding);
+      return buffer.toString('utf8');
     } catch (error) {
       throw new Error(`Failed to read text file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -253,32 +202,12 @@ export function createGraphClient(config: GraphAuthConfig): MicrosoftGraphClient
  * @returns boolean indicating if token appears valid
  */
 export function isValidAccessToken(token: string): boolean {
-  // Normalize token (remove optional 'Bearer ' prefix)
-  const normalized = (token || '').trim().replace(/^Bearer\s+/i, '');
-  
   // Ensure token is present
-  if (!normalized || normalized.length === 0) {
+  if (!token || token.trim().length === 0) {
     console.log('Token validation failed: Token is empty');
     return false;
   }
   
-  // If it looks like a JWT, perform lightweight checks; otherwise accept as opaque
-  const parts = normalized.split('.');
-  if (parts.length === 3) {
-    try {
-      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-      if (payload.exp && payload.exp < Date.now() / 1000) {
-        console.log('Token validation failed: Token has expired');
-        return false;
-      }
-      return true;
-    } catch (err) {
-      // If parsing fails, treat as potentially opaque and accept
-      console.log('Token payload not parseable; treating as opaque token');
-      return true;
-    }
-  }
-  
-  // Accept non-JWT tokens (opaque tokens) as valid for pass-through
+  // Accept any non-empty token as valid
   return true;
 }
